@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+
 fn makeOdinTargetString(allocator: std.mem.Allocator, target: std.Build.ResolvedTarget) !?[]const u8 {
     const arch = target.query.cpu_arch orelse return null;
     const arch_string = switch (arch) {
@@ -20,13 +21,25 @@ fn makeOdinTargetString(allocator: std.mem.Allocator, target: std.Build.Resolved
     };
 }
 
+fn applyZigOptimization(odin_compile: *std.Build.Step.Run, optimize: std.builtin.OptimizeMode) void {
+    return switch (optimize) {
+        .Debug => odin_compile.addArgs(&[_][]const u8{ "-debug", "-o:none" }),
+        .ReleaseSafe => odin_compile.addArg("-o:minimal"),
+        .ReleaseSmall => odin_compile.addArg("-o:size"),
+        .ReleaseFast => odin_compile.addArg("-o:speed"),
+        // else => std.debug.panic("unmapped odin optimization mode for zig OptimizeMode={}", .{optimize}),
+    };
+}
+
 pub fn build(b: *std.Build) !void {
     const host = builtin.target;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     // odin_compile.addFileArg("odin");
-    const odin_compile = b.addSystemCommand(&.{ "odin", "build", ".", "-build-mode:obj", "-out:zig-out/main.o", "-o:speed" });
+    const odin_compile = b.addSystemCommand(&.{ "odin", "build", ".", "-build-mode:obj", "-out:zig-out/main.o", "-use-single-module" });
+    applyZigOptimization(odin_compile, optimize);
+
     if (try makeOdinTargetString(b.allocator, target)) |odin_target_string| {
         const target_flag = try std.mem.concat(b.allocator, u8, &.{ "-target:", odin_target_string });
         odin_compile.addArg(target_flag);
