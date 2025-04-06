@@ -50,8 +50,8 @@ pub fn build(b: *std.Build) !void {
     const sdl_dep = b.dependency("sdl", .{
         .target = target,
         .optimize = optimize,
-        .preferred_linkage = .dynamic,
-        // .preferred_linkage = .static,
+        // .preferred_linkage = .dynamic,
+        .preferred_linkage = .static,
         //.strip = null,
         //.pic = null,
         //.lto = null,
