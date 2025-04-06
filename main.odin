@@ -20,8 +20,8 @@ main :: proc() {
 
 	// init sdl
 	ok := sdl.Init({.VIDEO}); sdl_err_panic(ok)
-	window := sdl.CreateWindow("Hello Triangle SDL3", 1920, 1080, {.FULLSCREEN}); sdl_err_panic(window)
-	gpu := sdl.CreateGPUDevice({.SPIRV}, true, "vulkan"); sdl_err_panic(gpu)
+	window := sdl.CreateWindow("Hello Triangle SDL3 Yay", 1920, 1080, {.FULLSCREEN}); sdl_err_panic(window)
+	gpu := sdl.CreateGPUDevice({.SPIRV}, true, nil); sdl_err_panic(gpu)
 	ok = sdl.ClaimWindowForGPUDevice(gpu, window); sdl_err_panic(ok)
 
 	
