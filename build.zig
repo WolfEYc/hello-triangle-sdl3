@@ -33,10 +33,14 @@ fn applyZigOptimization(odin_compile: *std.Build.Step.Run, optimize: std.builtin
 
 pub fn build(b: *std.Build) !void {
     const host = builtin.target;
-    const target = b.standardTargetOptions(.{});
+    var target = b.standardTargetOptions(.{});
+    if (target.query.os_tag == .windows) {
+        target.query.abi = .msvc;
+    }
     const optimize = b.standardOptimizeOption(.{});
+    const target_os = target.query.os_tag orelse host.os.tag;
 
-    // odin_compile.addFileArg("odin");
+    // odin
     const odin_compile = b.addSystemCommand(&.{ "odin", "build", ".", "-build-mode:obj", "-out:zig-out/main.o", "-use-single-module" });
     applyZigOptimization(odin_compile, optimize);
 
@@ -49,42 +53,43 @@ pub fn build(b: *std.Build) !void {
         .name = "game",
         .target = target,
         .optimize = optimize,
+        // .link_libc = false,
     });
 
-    { // odin source
-        const target_os = target.query.os_tag orelse host.os.tag;
-        if (target_os == .windows) {
-            exe.addObjectFile(b.path("zig-out/main.obj"));
-        } else {
-            exe.addObjectFile(b.path("zig-out/main.o"));
-        }
-        exe.step.dependOn(&odin_compile.step);
+    if (target_os == .windows) {
+        exe.addObjectFile(b.path("zig-out/main.obj"));
+        exe.addLibraryPath(b.path("lib/SDL3/shared"));
+        b.installBinFile("lib/SDL3/shared/SDL3.dll", "SDL3.dll");
+        exe.linkSystemLibrary("SDL3");
+    } else {
+        exe.addObjectFile(b.path("zig-out/main.o"));
+        //sdl
+        const sdl_dep = b.dependency("sdl", .{
+            .target = target,
+            .optimize = optimize,
+            // .preferred_linkage = .dynamic,
+            .preferred_linkage = .static,
+            //.strip = null,
+            //.pic = null,
+            //.lto = null,
+            //.emscripten_pthreads = false,
+            //.install_build_config_h = false,
+        });
+        const sdl_lib = sdl_dep.artifact("SDL3");
+        // const sdl_test_lib = sdl_dep.artifact("SDL3_test");
+        exe.linkLibrary(sdl_lib);
+        exe.linkLibC();
     }
-    const sdl_dep = b.dependency("sdl", .{
-        .target = target,
-        .optimize = optimize,
-        // .preferred_linkage = .dynamic,
-        .preferred_linkage = .static,
-        //.strip = null,
-        //.pic = null,
-        //.lto = null,
-        //.emscripten_pthreads = false,
-        //.install_build_config_h = false,
-    });
-    const sdl_lib = sdl_dep.artifact("SDL3");
-    // const sdl_test_lib = sdl_dep.artifact("SDL3_test");
-    exe.linkLibrary(sdl_lib);
+    exe.step.dependOn(&odin_compile.step);
 
+    // build
     b.installArtifact(exe);
-
+    // run
     const run_cmd = b.addRunArtifact(exe);
-
     run_cmd.step.dependOn(b.getInstallStep());
-
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
-
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 }

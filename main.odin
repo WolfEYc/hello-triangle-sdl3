@@ -38,9 +38,8 @@ main :: proc() {
 		}
 		// update game state
 
-		// begin cmd buf
+		// render
 		cmd_buf := sdl.AcquireGPUCommandBuffer(gpu); sdl_err_panic(cmd_buf)
-		// begin render pass
 		swapchain_tex: ^sdl.GPUTexture
 		ok = sdl.WaitAndAcquireGPUSwapchainTexture(cmd_buf, window, &swapchain_tex, nil, nil); sdl_err_panic(ok)
 
@@ -55,8 +54,6 @@ main :: proc() {
 
 		// end draw
 		sdl.EndGPURenderPass(render_pass)
-		// end render pass
 		ok = sdl.SubmitGPUCommandBuffer(cmd_buf); sdl_err_panic(ok)		
-		//end cmd buf
 	}
 }
